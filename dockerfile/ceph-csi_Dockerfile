@@ -1,0 +1,38 @@
+# ENV
+ARG GO_ARCH=riscv64
+ARG BASE_IMAGE=quay.io/ceph/ceph:v18
+FROM ${BASE_IMAGE} as updated_base
+
+# Install necessary packages and dependencies for building
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    gcc \
+    make \
+    git \
+    ca-certificates \
+    nfs-common \
+    librados-dev \
+    librbd-dev \
+    libcephfs-dev \
+    nfs-common  \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM updated_base
+
+LABEL maintainers="Ceph-CSI Authors" \
+    architecture=${GO_ARCH} \
+    description="Ceph-CSI Plugin"
+
+# Copy the built binary from the builder stage
+COPY  _output/cephcsi /usr/local/bin/cephcsi
+
+# Verify that all dynamically linked libraries are available
+RUN [ $(ldd /usr/local/bin/cephcsi | grep -c '=> not found') = '0' ]
+
+# Expose necessary ports
+EXPOSE 5000 6789 6800 6801 6802 6803 6804 6805 80
+
+ENTRYPOINT ["/usr/local/bin/cephcsi"]
+

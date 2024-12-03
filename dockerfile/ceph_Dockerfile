@@ -1,0 +1,59 @@
+# 使用 Ubuntu 22.04 作为基础镜像
+FROM k8s-ubuntu:22.04
+
+# 设置镜像的维护者信息
+LABEL maintainer="wang xiao <wxiao1002@yeah.net>"
+LABEL ceph=True
+LABEL RELEASE=HEAD
+LABEL GIT_REPO=https://github.com/ceph/ceph-container.git
+LABEL GIT_BRANCH=HEAD
+LABEL GIT_COMMIT=c5aaba5e3282b30e4782f2b5d6e4e362e22dfcb7
+LABEL CEPH_VERSION="reef"
+LABEL CEPH_POINT_RELEASE="-18.2.4"
+
+# 设置 Ceph 和系统相关的环境变量
+ENV CEPH_VERSION=reef
+ENV CEPH_POINT_RELEASE=-18.2.4
+ENV CEPH_DEVEL=false
+ENV CEPH_REF=reef
+ENV OSD_FLAVOR=default
+ENV DEBIAN_FRONTEND=noninteractive
+# 暴露 Ceph 所需的端口
+EXPOSE 5000 6789 6800 6801 6802 6803 6804 6805 80
+
+# 安装必要的工具和依赖
+RUN apt-get update && apt-get install -y \
+    jq \
+    curl \
+    lsb-release \
+    gnupg \
+    ca-certificates \
+    lvm2 \
+    smartmontools \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# 添加 Ceph 的仓库并导入 Ceph 密钥
+RUN curl -fsSL https://download.ceph.com/keys/release.asc | tee /etc/apt/trusted.gpg.d/ceph.asc
+RUN echo "deb https://download.ceph.com/debian-$CEPH_VERSION $(lsb_release -c | awk '{print $2}') main" | tee /etc/apt/sources.list.d/ceph.list
+
+# 安装 Ceph 相关的包
+RUN apt-get update && apt-get install -y \
+    ceph ceph-common ceph-mon ceph-osd ceph-mds ceph-mgr  ceph-mgr-dashboard \
+    radosgw ceph-mgr-k8sevents \
+    && rm -rf /var/lib/apt/lists/*
+
+# 配置一些 Ceph 系统参数
+RUN echo "@ceph - memlock 204800" >> /etc/security/limits.conf \
+    && echo "@root - memlock 204800" >> /etc/security/limits.conf
+
+# 清理不必要的文件以减小镜像大小
+RUN apt-get purge -y --auto-remove curl gnupg lsb-release \
+    && rm -rf /var/tmp/* /tmp/* /var/log/* \
+    && find / -name "*.pyc" -exec rm -f {} \; \
+    && apt-get clean
+
+# 设置默认的命令
+CMD ["/bin/bash"]
+

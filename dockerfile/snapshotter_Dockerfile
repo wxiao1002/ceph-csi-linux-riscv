@@ -1,0 +1,7 @@
+FROM k8s-ubuntu:22.04 
+LABEL maintainers="Kubernetes Authors"
+LABEL description="CSI External Snapshotter Sidecar"
+COPY ./bin/csi-snapshotter csi-snapshotter 
+COPY ./bin/snapshot-controller snapshot-controller 
+COPY ./bin/snapshot-validation-webhook snapshot-validation-webhook
+ENTRYPOINT ["/csi-snapshotter"]

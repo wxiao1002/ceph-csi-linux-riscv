@@ -1,0 +1,7 @@
+FROM k8s-ubuntu:22.04 
+LABEL maintainers="Kubernetes Authors"
+LABEL description="CSI Node driver registrar"
+ARG binary=./bin/csi-node-driver-registrar
+
+COPY ${binary} csi-node-driver-registrar
+ENTRYPOINT ["/csi-node-driver-registrar"]
